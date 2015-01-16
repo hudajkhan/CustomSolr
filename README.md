@@ -1,0 +1,2 @@
+# CustomSolr
+Solr function
