@@ -39,7 +39,7 @@ public class TestDocDistanceInfo {
 	// The API base - we will read from a file available on the server
 	// This will include the JSON we expect to get from the actual API
 	//http://frontierspatial.com/JanuarySprint/frontier/documents.php?lat1=41.0&lon1=-79.9&lat2=45&lon2=-71.1
-	private String apiURLBase = "http://frontierspatial.com/JanuarySprint/frontier/documents.php?";
+	private String apiURLBase = "http://frontierspatial.com/JanuarySprint/frontier/v1/documents.php?";
 	private String uriKeyName = "vivo_uri";
 	private String distanceKeyName = "distance";
 	private String lat1 = null;
@@ -47,6 +47,7 @@ public class TestDocDistanceInfo {
 	private String lat2 = null;
 	private String lon2 = null;
 	//Could potentially pass in particular parameters as need be
+	//SW NE -> y1,x1,y2,x2
 	public TestDocDistanceInfo(String lat1, String lon1, String lat2, String lon2) {
 		this.lat1 = lat1;
 		this.lon1 = lon1;
@@ -78,7 +79,8 @@ public class TestDocDistanceInfo {
 	private String getJSON() {
 
 		String results = null;
-		String dataUrl = this.apiURLBase + "lat1=" + this.lat1 + "&lon1=" + this.lon1 + "&lat2=" + this.lat2 + "&lon2=" + this.lon2;
+		//The API expects = BBOX=WSEN i.e. lon1, lat1, lon2, lat2
+		String dataUrl = this.apiURLBase + "bbox=" + this.lon1 + "," + this.lat1 + "," + this.lon2 + "," + this.lat2;
 
 		try {
 

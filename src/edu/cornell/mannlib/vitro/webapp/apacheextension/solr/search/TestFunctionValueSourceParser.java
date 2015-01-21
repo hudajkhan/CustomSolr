@@ -31,17 +31,30 @@ public class TestFunctionValueSourceParser extends ValueSourceParser {
 		  //System.out.println("Apres Value Source instantiation");
 		  //This appears to be where you can actually get params
 		  SolrParams parameters = fqp.getParams();
+		  //Method getParams did not return an array even with a comma delimited string
+		  String bbox = parameters.get("bbox");
+		  if(StringUtils.isEmpty(bbox) || !bbox.contains(",")) {
+			  System.out.println("Error: Bounding box paramter does not exist or does not contain comma, returning null");
+			  return null;
+		  }
+		  String[] bboxCoords = bbox.split(",");
+		  //Expect four parameters
+		  if(bboxCoords.length < 4) {
+			  System.out.println("Insufficient number of bounding box parameters = ");
+			  return null;
+		  }
+		  //WSEN = i.e., lon1, lat1, lon2, lat2
 		  //Get lat1, lon1, lat2, lon2
-		  String lat1 = parameters.get("lat1");
-		  String lon1 = parameters.get("lon1");
-		  String lat2 = parameters.get("lat2");
-		  String lon2 = parameters.get("lon2");
+		  String lon1 = bboxCoords[0];
+		  String lat1 = bboxCoords[1];
+		  String lon2 = bboxCoords[2];
+		  String lat2 = bboxCoords[3];
 		  //If any of these are null, return ull
 		  if(StringUtils.isEmpty(lat1) || StringUtils.isEmpty(lon1) || StringUtils.isEmpty(lat2) || StringUtils.isEmpty(lon2)) {
 			  System.out.println("One of the paramters was empty and so returning null");
 			  return null;
 		  }
-		  System.out.println("apres parameters retrieval: " + lat1 + ", " + lon1 + " - " + lat2 + "," + lon2);
+		  System.out.println("apres parameters retrieval: lat1,lon1 - lat2,lon2= " + lat1 + ", " + lon1 + " - " + lat2 + "," + lon2);
 
 		  //The example 
 		  Map<String, Float> data = this.getDocDistanceInfo(lat1, lon1, lat2, lon2);
@@ -56,6 +69,7 @@ public class TestFunctionValueSourceParser extends ValueSourceParser {
 		  return tfvs;
 	  }
 	  
+	  //SW NE -> y1,x1, y2,x2
 	  private Map<String, Float> getDocDistanceInfo(String lat1, String lon1, String lat2, String lon2) {
 		  Map<String, Float> data = new HashMap<String, Float>();
 		  
