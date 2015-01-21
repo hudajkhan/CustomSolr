@@ -22,24 +22,16 @@ import org.apache.commons.lang.StringUtils;
  */
 public class TestFunctionValueSource extends ValueSource {
 	final Map<String, Float> constants;
-	final String qk;
-	final String field;
+
+	
 
 	// final ValueSource vs;
 
-	public TestFunctionValueSource(Map<String, Float> constants, String qk,
-			String field) {
-		System.out
-				.println("=======>>>>>TestFunctionValueSource: constructor, qk= "
-						+ qk
-						+ " , field = "
-						+ field
-						+ " - constants :"
-						+ constants.toString());
+	public TestFunctionValueSource(Map<String, Float> constants) {
+		
 
 		this.constants = constants;
-		this.qk = qk;
-		this.field = field;
+		
 	}
 
 	public FunctionValues getValues(Map context,
@@ -181,8 +173,8 @@ public class TestFunctionValueSource extends ValueSource {
 
 	@Override
 	public String description() {
-		return "Overriding TestFunctionValueSource description" + field + "_"
-				+ qk;
+		return "Overriding TestFunctionValueSource description" 
+				+ "";
 	}
 
 	@Override
@@ -190,12 +182,13 @@ public class TestFunctionValueSource extends ValueSource {
 		if (!(o instanceof TestFunctionValueSource))
 			return false;
 		TestFunctionValueSource other = (TestFunctionValueSource) o;
-		return this.field.equals(other.field) && this.qk.equals(other.qk);
+		return this.constants.equals(other.constants) ;
 	}
 
 	@Override
 	public int hashCode() {
-		return field.hashCode() * qk.hashCode();
+		//Not sure what to do with hashcodes
+		return constants.hashCode();
 	}
 	
 	
