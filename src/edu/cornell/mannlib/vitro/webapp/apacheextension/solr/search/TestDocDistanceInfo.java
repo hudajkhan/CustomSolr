@@ -10,24 +10,16 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import edu.cornell.mannlib.vitro.webapp.apacheextension.lucene.queries.function.*;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.solr.common.params.SolrParams;
-import org.apache.solr.common.util.NamedList;
-import org.apache.solr.search.FunctionQParser;
-import org.apache.solr.search.SyntaxError;
-import org.apache.solr.search.ValueSourceParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /*
  * Based on http://stackoverflow.com/questions/19528841/custom-functionquery-constvaluesource
@@ -36,12 +28,13 @@ import org.apache.solr.search.ValueSourceParser;
  * At that point, we would probably be connecting to an external database instead
  */
 public class TestDocDistanceInfo {
-	// The API base - we will read from a file available on the server
-	// This will include the JSON we expect to get from the actual API
-	//http://frontierspatial.com/JanuarySprint/frontier/documents.php?lat1=41.0&lon1=-79.9&lat2=45&lon2=-71.1
-	private String apiURLBase = "http://frontierspatial.com/JanuarySprint/frontier/v1/documents.php?";
+	private static final Log log = LogFactory.getLog(TestDocDistanceInfo.class);
+
+	
+	//Format for API call: http://frontierspatial.com/JanuarySprint/mapper/v1/documents.php?bbox=-75,42,-74,43
+	private String apiURLBase = "http://frontierspatial.com/JanuarySprint/mapper/v1/documents.php?";
 	private String uriKeyName = "vivo_uri";
-	private String distanceKeyName = "distance";
+	private String rankKeyName = "rank";
 	private String lat1 = null;
 	private String lon1 = null;
 	private String lat2 = null;
@@ -65,13 +58,11 @@ public class TestDocDistanceInfo {
 			try {
 				data = this.processOutput(JSON);
 			} catch (Exception ex) {
-				System.out
-						.println("Error occurring in processing JSON to data, processDocDistanceInfo");
-				ex.printStackTrace();
+				log.error("Error occurring in processing JSON to data, processDocDistanceInfo", ex);
+				//ex.printStackTrace();
 			}
 		} else {
-			System.out
-					.println("ProcessDocDistanceInfo: Error, JSON null, returning nothing");
+			log.info("ProcessDocDistanceInfo: JSON null, returning nothing");
 		}
 		return data;
 	}
@@ -81,7 +72,7 @@ public class TestDocDistanceInfo {
 		String results = null;
 		//The API expects = BBOX=WSEN i.e. lon1, lat1, lon2, lat2
 		String dataUrl = this.apiURLBase + "bbox=" + this.lon1 + "," + this.lat1 + "," + this.lon2 + "," + this.lat2;
-
+		log.debug("Utilizing dataURL: " + dataUrl);
 		try {
 
 			StringWriter sw = new StringWriter();
@@ -96,52 +87,65 @@ public class TestDocDistanceInfo {
 			in.close();
 
 			results = sw.toString();
-			// System.out.println("results before processing: "+results);
+			// log.debug("results before processing: "+results);
 
 		} catch (Exception ex) {
-			System.out.println("Exception occurred in retrieving results");
-			ex.printStackTrace();
+			log.error("Exception occurred in retrieving results", ex);
+			
 			return null;
 		}
 		return results;
 
 	}
 
+	//As of 4/8/15, returns {"type":"FeatureCollection",
+	//						"features":[
+	//								{"type":"Feature","geometry":null,
+	//								  "properties":
+	//									{"distance":"0","vivo_uri":..., "rank_bbox_area_diff":1}
+	//								},
+	//
 	private Map<String, Float> processOutput(String results) throws Exception {
 
-		Map<String, Float> docToDistance = new HashMap<String, Float>();
+		Map<String, Float> docToRank = new HashMap<String, Float>();
 
 		try {
-			JSONArray jsonArray = (JSONArray) JSONSerializer.toJSON(results);
-			System.out.println("Results to string " + jsonArray.toString());
-			int size = jsonArray.size();
-			System.out.println("JSONArray size is " + size);
+			//
+			JSONObject jsonResult = (JSONObject) JSONSerializer.toJSON(results);
+			
+			JSONArray featuresArray = jsonResult.getJSONArray("features");
+			
+			log.debug("Results to string " + featuresArray.toString());
+			int size = featuresArray.size();
+			log.debug("JSONArray size is " + size);
 
 			int i;
 			for (i = 0; i < size; i++) {
-				JSONObject o = jsonArray.getJSONObject(i);
-				
-				if (o.has(uriKeyName) && 
-						StringUtils.isNotEmpty(o.getString(uriKeyName)) &&
-						o.has(distanceKeyName)) {
+				JSONObject o = featuresArray.getJSONObject(i);
+				JSONObject properties = o.getJSONObject("properties");
+				if (properties.has(uriKeyName) && 
+						StringUtils.isNotEmpty(properties.getString(uriKeyName)) &&
+						properties.has(rankKeyName)) {
 					// TODO: Check if this works or not
-					String URI = o.getString(uriKeyName);
-					Float distance = new Float(o.getInt(distanceKeyName));
-					docToDistance.put(URI, distance);
-					System.out.println("Putting in distance for " + URI + " = "
-							+ distance);
+					String URI = properties.getString(uriKeyName);
+					Float rank = new Float(properties.getInt(rankKeyName));
+					//distance will always return as 0 since that translates to whether or not it overlaps with the
+					//given bounding box
+					//rank is determined by difference in area of the item and the bounding box
+					docToRank.put(URI, rank);
+					log.debug("Putting in rank for " + URI + " = "
+							+ rank);
 				}
 			}
 
 		} catch (Exception ex) {
-			System.out.println("Error message in converting JSON to hashmap");
-			ex.printStackTrace();
-
+			log.error("Error message in converting JSON to hashmap", ex);
+			
 			throw ex;
 		}
 
 		//
-		return docToDistance;
+		return docToRank;
 
 	}
 

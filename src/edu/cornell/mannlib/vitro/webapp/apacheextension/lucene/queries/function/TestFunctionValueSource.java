@@ -3,7 +3,9 @@ package edu.cornell.mannlib.vitro.webapp.apacheextension.lucene.queries.function
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.lucene.document.Document;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.BinaryDocValues;
@@ -11,9 +13,8 @@ import org.apache.lucene.index.Fields;
 import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.search.FieldCache;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
-import org.apache.commons.lang.StringUtils;
+
 
 /*
  * TestFunctionValueSource - responsible for instantiating function value for particular query
@@ -21,6 +22,8 @@ import org.apache.commons.lang.StringUtils;
  * Return constant value based on key
  */
 public class TestFunctionValueSource extends ValueSource {
+	private static final Log log = LogFactory.getLog(TestFunctionValueSource.class);
+
 	final Map<String, Float> constants;
 
 	
@@ -39,16 +42,16 @@ public class TestFunctionValueSource extends ValueSource {
 		// Returns function values instance, this appears to actually implement
 		// the methods
 		// of the abstract class and return them at the same time
-		System.out.println("=====>>>TestFunctionValueSource getValues method");
+		log.debug("=====>>>TestFunctionValueSource getValues method");
 		// Not sure why this is 'experimental' and what all that means
 		final Fields fields = readerContext.reader().fields();
-		System.out.println("Retrieved Fields ");
+		log.debug("Retrieved Fields ");
 		final AtomicReader reader = readerContext.reader();
-		System.out.println("Retrieved Reader");
+		log.debug("Retrieved Reader");
 		// Not sure what to get from fields here or if we should get anything
 		// Test out what we can do with VS here
 		// final FunctionValues fv = this.vs.getValues(context, readerContext);
-		// System.out.println("Retrieved function values from the input VS");
+		// log.debug("Retrieved function values from the input VS");
 
 		// Trying field cache-change boolean to false, true will return number
 		// of docs with that field
@@ -73,9 +76,9 @@ public class TestFunctionValueSource extends ValueSource {
 					/*
 					 * Document document = reader.document(doc); String docId =
 					 * document.get("DocId"); if(docId != null) {
-					 * System.out.println("Doc id is " + docId); } String URI =
+					 * log.debug("Doc id is " + docId); } String URI =
 					 * document.get("URI"); if(URI != null) {
-					 * System.out.println("URI is  " + URI);
+					 * log.debug("URI is  " + URI);
 					 * 
 					 * }
 					 */
@@ -83,26 +86,25 @@ public class TestFunctionValueSource extends ValueSource {
 					uriFromCache = this.getURIFromCache(doc);
 					distance = this.getDistanceForURI(uriFromCache);
 					if (uriFromCache != null) {
-						System.out.println("Result for URI FROM Cache for "
+						log.debug("Result for URI FROM Cache for "
 								+ doc + " is " + uriFromCache);
 						if(distance != null) {
-							System.out.println("Distance is " + distance);
+							log.debug("Distance is " + distance);
 						} else {
-							System.out.println("Distance is null, resetting to a max value here just to get past the code");
+							log.debug("Distance is null, resetting to a max value here just to get past the code");
 							//Not sure how to return null or enable the sort to 'skip' over the items that don't have any recorded distance
 							distance = Float.MAX_VALUE;
 						}
 					} else {
-						System.out.println("URIFromCache does not exist");
+						log.debug("URIFromCache does not exist");
 					}
 
 					// Get the value based on the URI from the hash
 				} catch (Exception ex) {
-					System.out
-							.println("Error occurred in floatVal of FunctionValues in TestFunctionValueSource");
-					ex.printStackTrace();
+					log.error("Error occurred in floatVal of FunctionValues in TestFunctionValueSource", ex);
+					//ex.printStackTrace();
 				}
-				System.out.println("Returning distance:");
+				log.debug("Returning distance:" + distance);
 				return distance;
 			}
 
@@ -130,9 +132,9 @@ public class TestFunctionValueSource extends ValueSource {
 				BytesRef result = new BytesRef();
 				values.get(doc, result);
 				String uri = result.utf8ToString();
-				System.out.println("getURIFromCache:URI From Cache for " + doc);
+				log.debug("getURIFromCache:URI From Cache for " + doc);
 				if(uri != null){
-					System.out.println("getURIFromCache:URI is " + uri);
+					log.debug("getURIFromCache:URI is " + uri);
 				} else {
 					
 				}
@@ -144,27 +146,27 @@ public class TestFunctionValueSource extends ValueSource {
 				// if uri is empty or if the uri is not within our set of URIs
 				// with associated distance information
 				if (StringUtils.isEmpty(uri) || !constants.containsKey(uri)) {
-					System.out.println("getDistanceForURI: uri is empty or the hash does not contain this particular uri");
+					log.debug("getDistanceForURI: uri is empty or the hash does not contain this particular uri");
 					return null;
 				}
-				System.out.println("getDistanceForURI: hash contains URI " + uri);
+				log.debug("getDistanceForURI: hash contains URI " + uri);
 				return constants.get(uri);
 			}
 			
 			public boolean exists(int doc) {
-				System.out.println("testfunctionvaluesource exists: " + doc);
+				log.debug("testfunctionvaluesource exists: " + doc);
 				String uriFromCache = this.getURIFromCache(doc);
 				//if uri exists
 				if(StringUtils.isEmpty(uriFromCache)) {
-					System.out.println("URI is empty");
+					log.debug("URI is empty");
 					return false;
 				}
 				//Check if the URI exists in the distance hash
 				if(!constants.containsKey(uriFromCache)) {
-					System.out.println("testfunctionvaluesource exists: hash does not contain URI");
+					log.debug("testfunctionvaluesource exists: hash does not contain URI");
 					return false;
 				}
-				System.out.println("testfunctionvaluesource exists is true ");
+				log.debug("testfunctionvaluesource exists is true ");
 				return true;
 			}
 		};
